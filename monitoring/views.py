@@ -65,7 +65,7 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
         stats_per_city = models.Address.objects.filter(primary=True).values('city').filter(
             **params).annotate(**query)
 
-        context['stats'] = {
+        context['territory_stats'] = {
             'total': models.Address.objects.filter(primary=True, **params).aggregate(**query),
             'cities': {
                 stat['city'] if 'city' in stat else stat[
@@ -73,7 +73,7 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
                 stats_per_city}
         }
 
-        context['data'] = [{
+        context['health_center_stats'] = [{
             "healthCenterName": u.center_name,
             "latitude": u.latitude,
             "longitude": u.longitude,

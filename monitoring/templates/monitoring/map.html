@@ -4,16 +4,14 @@
 
 {% block content %}
     <style>
+        body {
+            margin: 25px;
+        }
+
         path {
             fill: #ccc;
             stroke: #fff;
             stroke-width: .5px;
-        }
-
-        circle {
-            fill: #fff;
-            fill-opacity: 0.4;
-            stroke: #111;
         }
 
         path.active {
@@ -48,9 +46,13 @@
             fill: red;
         }
 
-        circle.active {
-            fill: blue;
+        #map {
+            width: 1000px;
+            height: 500px;
+            border: 1px solid silver;
+            background: #E6E6E6;
         }
+
     </style>
 
     <div>
@@ -123,11 +125,10 @@
         </form>
     </div>
 
-    <div id="map" class="border row">
-        <svg class="col"></svg>
-    </div>
+    <div id="map" class="border row"></div>
 
-    {{ stats|json_script:'data' }}
+    {{ territory_stats|json_script:'territoryData' }}
+    {{ health_center_stats|json_script:'healthCenterData' }}
 
     <script>
         const STATIC_URL = "{% static '' %}";
