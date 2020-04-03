@@ -11,6 +11,8 @@ from . import forms
 from . import models
 from . import utils
 
+from prediction.models import HealthCenter, HealthCenterStatus
+
 
 # Create your views here.
 
@@ -70,6 +72,21 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
                     'neighbourhood']: stat for stat in
                 stats_per_city}
         }
+
+        context['data'] = [{
+            "healthCenterName": u.center_name,
+            "latitude": u.latitude,
+            "longitude": u.longitude,
+            "healthCenterStatus": {
+                "beds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "intensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "respirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedBeds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedIntensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedRespirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "date": str(HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].date) if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else '2020-01-01'
+            }
+        } for u in HealthCenter.objects.all()]
 
         return context
 
