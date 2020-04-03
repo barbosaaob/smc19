@@ -24,21 +24,37 @@
                 </div>
             </div>
             {% endfor %}
+            <div class="col-lg-auto">
+                <label for="id_gerar_grafico">Gerar Gráfico</label>
+                <div class="">
+                    <input id="id_gerar_grafico" name="gerar_grafico" type="submit" class="btn btn-info" value="Calcular">
+                </div>
+            </div>
         </div>
-        <input type="submit" class="btn btn-info" value="Calcular">
+        <div class="row">
+            <div class="col-lg-2">
+                <h2>Proporções</h2>
+                {{form2|crispy}}
+            </div>
+            <div class="col-lg-10">
+                {% if graph %}
+                <div class="row">
+                    <div class="col-lg text-center">
+                        <h2>Modelo {{title}}</h2>
+
+                        <div id="id_graph">
+
+                            <p><b>Infectados: </b>{{max_infected}}</p>
+                            <p><b>Dia D:</b>{{day_D}}</p>
+
+                            {{ graph|safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </form>
 </div>
-{% if graph %}
-<div class="row">
-    <div class="col-lg">
-        <h1>Modelo {{title}}</h1>
-        <div id="id_graph" align="center">
-            <b>Infectados: </b> {{ max_infected }}<br>
-	    <b>Dia D:</b> {{ day_D }}º<br>
-            {{ graph|safe }}
-        </div>
-    </div>
-</div>
-{% endif %}
 
 {% endblock content %}
