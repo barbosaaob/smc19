@@ -285,6 +285,7 @@ class MonitoringCreate(mixins.LoginRequiredMixin, generic.CreateView):
     model = models.Monitoring
     form_class = forms.MonitoringForm
 
+
     def get_context_data(self, **kwargs):
         context = super(MonitoringCreate, self).get_context_data(**kwargs)
 
