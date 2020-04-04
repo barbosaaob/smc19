@@ -168,7 +168,7 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
             ON
                 monitoring_profile.id = monitoring_address.profile_id 
         WHERE 
-            monitoring_address."primary" = TRUE
+            monitoring_address."primary" = 1
         GROUP BY 
             monitoring_address.city
         '''
