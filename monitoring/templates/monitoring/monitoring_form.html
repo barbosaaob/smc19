@@ -36,10 +36,9 @@
 
                 <div id="div_id_profile" class="form-group">
                     <!-- aqui vem os profiles encontrados><!-->
-
-                    <div id="profiles">
-
-                    </div>
+                    <select name="profile" class="select form-control" required id="id_profile">
+                        <option value="" selected>Nenhum perfil selecionado.</option>
+                    </select>
                 </div>
                 {{ form.tested|as_crispy_field }}
                 {{ form.suspect|as_crispy_field }}

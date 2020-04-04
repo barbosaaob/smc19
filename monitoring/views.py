@@ -27,7 +27,7 @@ class Index(mixins.LoginRequiredMixin, generic.ListView):
 
         if params.get('search-target') == 'profile':
             search_term = self.request.GET.get('term')
-            return models.Profile.objects.filter(Q(full_name__startswith=search_term) |
+            return models.Profile.objects.filter(Q(full_name__icontains=search_term) |
                                                  Q(id_document__startswith=search_term) |
                                                  Q(cpf__startswith=search_term) |
                                                  Q(cns__startswith=search_term))
@@ -231,7 +231,7 @@ class ProfileSearch(mixins.LoginRequiredMixin, generic.CreateView):
     model = models.Profile
     def get(self, request, *args, **kwargs):
         search_term = self.kwargs['term']
-        profiles = list(models.Profile.objects.filter(Q(full_name__startswith=search_term) |
+        profiles = list(models.Profile.objects.filter(Q(full_name__icontains=search_term) |
                                                     Q(id_document__startswith=search_term) |
                                                     Q(cpf__startswith=search_term) |
                                                     Q(cns__startswith=search_term)).values())

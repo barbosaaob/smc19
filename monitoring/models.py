@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 
 from accounts.models import Account
-
+from prediction.models import HealthCenter
 import validators
 from . import choices
 
@@ -39,7 +39,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.full_name
-
 
 class Address(models.Model):
     profile = models.ForeignKey(Profile, models.CASCADE)
@@ -151,3 +150,34 @@ class ActionLog(models.Model):
 
     def __str__(self):
         return 'Action: ' + self.action + ', Model: ' + self.model + ', Account: ' + self.user.__str__()
+
+
+class DeadProfile(models.Model):
+    full_name = models.CharField(verbose_name='Nome completo', max_length=100, blank=True, default='')
+    cns = models.CharField(verbose_name='Cartão do SUS', max_length=15, blank=True, default='000000000000000')
+    id_document = models.CharField(verbose_name='RG', max_length=15, blank=True, default='000000000')
+    cpf = models.CharField(verbose_name='CPF', max_length=11, blank=True, default='00000000000',
+                           validators=[validators.validate_cpf], null=True)
+    age = models.PositiveIntegerField(verbose_name='Idade', default=0)
+    death_date = models.DateField(verbose_name='Data do óbito', default='',
+                                  validators=[validators.prevent_future_date])
+    hospital = models.ForeignKey(HealthCenter, on_delete=models.CASCADE, verbose_name="Local do óbito(Hospital)")
+
+class Familiar(models.Model):
+
+    dead_profile = models.ForeignKey(DeadProfile, on_delete=models.CASCADE)
+    full_name = models.CharField(verbose_name='Nome completo', max_length=100, blank=True, default='')
+
+    cns = models.CharField(verbose_name='Cartão do SUS', max_length=15, blank=True, default='000000000000000')
+    id_document = models.CharField(verbose_name='RG', max_length=15, blank=True, default='000000000')
+    cpf = models.CharField(verbose_name='CPF', max_length=11, blank=True, default='00000000000',
+                           validators=[validators.validate_cpf], null=True)
+
+    phone_number = models.CharField(verbose_name='Número de telefone', max_length=20, blank=True, default='')
+
+    age = models.PositiveIntegerField(verbose_name='Idade', default=0)
+
+    comorbidities = BitField(verbose_name='Comorbidades', flags=choices.comorbidities, default=0)
+
+    def __str__(self):
+        return self.full_name

@@ -13,7 +13,7 @@ class MonitoringForm(forms.ModelForm):
             'profile': 'Paciente'
         }
         widgets = {
-            'profile': forms.widgets.RadioSelect
+            'profile': forms.widgets.Select
         }
 
 
