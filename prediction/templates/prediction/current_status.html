@@ -17,6 +17,7 @@
             <th scope="col">UTI OCUPADO</th>
             <th scope="col">RES OCUPADO</th>
             <th scope="col">DATA</th>
+            <th scope="col"></th>
         </tr>
     </thead>
     <tbody>
@@ -29,6 +30,10 @@
             <td>{{ status.occupied_icus }}</td>
             <td>{{ status.occupied_respirators }}</td>
             <td>{{ status.date }}</td>
+            <td><form action="{% url 'prediction:status_delete' pk=status.pk %}" method="POST">
+                {% csrf_token %}
+                <input class="btn btn-default btn-danger" type="submit" value="Excluir Registro"/>
+              </form></td>
         </tr>
         {% endfor %}
     </tbody>
@@ -36,12 +41,7 @@
 <div class="row">
     <div class="col">
         <form>
-            <button class="btn btn-primary" formaction="{% url 'prediction:status_create' %}">Novo Registro</button>
-        </form>
-    </div>
-    <div class="col">
-        <form>
-            <button class="btn btn-secondary" formaction="{% url 'prediction:status_create' %}">Editar Registro</button>
+            <button class="btn btn-primary" formaction="{% url 'prediction:status_create' %}">Adicionar Registro</button>
         </form>
     </div>
 </div>

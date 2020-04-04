@@ -31,3 +31,29 @@ class HealthCenterStatus(models.Model):
 
     def __str__(self):
         return 'Status da unidade ' + str(self.health_center.center_name) + ' em ' + str(self.date) 
+
+
+def populate_healthcenterstatus():
+    from random import randint
+
+    hcs_to_create=[]
+
+    for hc in HealthCenter.objects.all():
+        beds = randint(0, 180)
+        occupied_beds = randint(0, beds)
+        icus = randint(0, 180)
+        occupied_icus = randint(0, icus)
+        respirators = randint(0, 180)
+        occupied_respirators = randint(0, respirators)
+
+        hcs_to_create.append(HealthCenterStatus(
+            health_center=hc,
+            beds=beds,
+            occupied_beds=occupied_beds,
+            icus=icus,
+            occupied_icus=occupied_icus,
+            respirators=respirators,
+            occupied_respirators=occupied_respirators
+        ))
+
+    HealthCenterStatus.objects.bulk_create(hcs_to_create)

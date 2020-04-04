@@ -2,40 +2,112 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-beds = 400      # numero de leitos
-icu_beds = 150  # leitos de uti
+# The SIR model differential equations.
+def deriv(y, t, N , beta, gamma):
+    S, I, R = y
+    dSdt = -beta * S * I / N
+    dIdt = beta * S * I / N - gamma * I
+    dRdt = gamma * I
+    return dSdt, dIdt, dRdt
 
-# numeros absolutos
-population_by_age = {
-    "0-9":   137952+134131+152581+147534,
-    "10-19": 156445+156547+170956+167207,
-    "20-29": 130805+141199+140817+149240,
-    "30-39": 100073+111840+117491+128978,
-    "40-49": 76368+85274+91125+101962,
-    "50-59": 51176+60372+62174+71484,
-    "60-69": 30936+36630+41368+47640,
-    "70-79": 13872+18675+21930+27457,
-    "80+":   163+333+776+1229+2066+3195+4251+5881+8442+11919
-}
+def compute_sir(N=1000, S0=0, I0=1, R0=0, beta=1.75, gamma=0.5, days=160):
+    """
+    Total population, N.
+    Initial number of infected and recovered individuals, I0 and R0.
+    Contact rate, beta, and mean recovery rate, gamma, (in 1/days).
+    """
+    
+    # A grid of time points (in days)
+    #t = np.linspace(0, 160, 160)
+    t = np.linspace(0, days, days)
 
-population_total = 0
-for age, population in population_by_age.items():
-    population_total += population
+    # Initial conditions vector
+    y0 = S0, I0, R0
+    # Integrate the SIR equations over the time grid, t.
+    ret = odeint(deriv, y0, t, args=(N, beta, gamma))
+    S, I, R = ret.T
 
-population_proportion = {
-    "0-9":   population_by_age["0-9"] / population_total,
-    "10-19": population_by_age["10-19"] / population_total,
-    "20-29": population_by_age["20-29"] / population_total,
-    "30-39": population_by_age["30-39"] / population_total,
-    "40-49": population_by_age["40-49"] / population_total,
-    "50-59": population_by_age["50-59"] / population_total,
-    "60-69": population_by_age["60-69"] / population_total,
-    "70-79": population_by_age["70-79"] / population_total,
-    "80+":   population_by_age["80+"] / population_total
-}
+    return (S, I, R)
 
-def proportions(S, I, R, symptomatic=0.2):
+def plot_sir(S, I, R, days):
+    # Plot the data on three separate curves for S(t), I(t) and R(t)
+    t = np.linspace(0, days, days)
+    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
+    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
+    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+    legend = plt.legend()
+    legend.get_frame().set_alpha(0.5)
+
+
+#### BEGIN SEIR BÁSICO
+def base_seir_model(N, init_vals, params, t):
+    S_0, E_0, I_0, R_0 = init_vals
+    S, E, I, R = [S_0], [E_0], [I_0], [R_0]
+    alpha, beta, gamma = params
+    dt = t[1] - t[0]
+    for _ in t[1:]:
+        next_S = S[-1] - (beta*S[-1]*I[-1])*dt
+        next_E = E[-1] + (beta*S[-1]*I[-1] - alpha*E[-1])*dt
+        next_I = I[-1] + (alpha*E[-1] - gamma*I[-1])*dt
+        next_R = R[-1] + (gamma*I[-1])*dt
+        S.append(next_S)
+        E.append(next_E)
+        I.append(next_I)
+        R.append(next_R)
+    S = np.array(S)*N
+    E = np.array(E)*N
+    I = np.array(I)*N
+    R = np.array(R)*N
+    return (S, E, I, R)
+
+def plot_seir(S, E, I, R, days):
+    # Plot the data on three separate curves for S(t), E(t), I(t) and R(t)
+    t = np.linspace(0, days, days)
+    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
+    plt.plot(t, E/1000, 'k', alpha=0.5, lw=2, label='Exposed')
+    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
+    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+    legend = plt.legend()
+    legend.get_frame().set_alpha(0.5)
+#### END SEIR BÁSICO
+
+#### BEGIN SEIR COM DISTANCIAMENTO SOCIAL
+def seir_model_with_soc_dist(N, init_vals, params, t):
+    S_0, E_0, I_0, R_0 = init_vals
+    S, E, I, R = [S_0], [E_0], [I_0], [R_0]
+    alpha, beta, gamma, rho = params
+    dt = t[1] - t[0]
+    for _ in t[1:]:
+        next_S = S[-1] - (rho*beta*S[-1]*I[-1])*dt
+        next_E = E[-1] + (rho*beta*S[-1]*I[-1] - alpha*E[-1])*dt
+        next_I = I[-1] + (alpha*E[-1] - gamma*I[-1])*dt
+        next_R = R[-1] + (gamma*I[-1])*dt
+        S.append(next_S)
+        E.append(next_E)
+        I.append(next_I)
+        R.append(next_R)
+    S = np.array(S)*N
+    E = np.array(E)*N
+    I = np.array(I)*N
+    R = np.array(R)*N
+    return (S, E, I, R)
+
+def plot_seir_with_soc_dist(S, E, I, R, days):
+    # Plot the data on three separate curves for S(t), E(t), I(t) and R(t)
+    t = np.linspace(0, days, days)
+    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
+    plt.plot(t, E/1000, 'k', alpha=0.5, lw=2, label='Exposed')
+    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
+    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+    plt.grid
+    legend = plt.legend()
+    legend.get_frame().set_alpha(0.5)
+#### END SEIR COM DISTANCIAMENTO SOCIAL
+
+#### BEGIN SEIR COM DISTANCIAMENT SOCIAL ADAPTATIVO
+def proportions(S, I, R, population_proportion, symptomatic=0.2):
   # proporcoes
+  print(population_proportion.keys())
   Ip = {
       "0-9":   population_proportion["0-9"] * I * symptomatic,
       "10-19": population_proportion["10-19"] * I * symptomatic,
@@ -47,7 +119,6 @@ def proportions(S, I, R, symptomatic=0.2):
       "70-79": population_proportion["70-79"] * I * symptomatic,
       "80+":   population_proportion["80+"] * I * symptomatic
   }
-
   Sp = {
       "0-9":   population_proportion["0-9"] * S,
       "10-19": population_proportion["10-19"] * S,
@@ -109,184 +180,92 @@ def proportions(S, I, R, symptomatic=0.2):
   # }
   death_constant = 1e-3
   D = {
-      "0-9":   death_constant * Ip["0-9"],
-      "10-19": death_constant * Ip["10-19"],
-      "20-29": death_constant * Ip["20-29"],
-      "30-39": death_constant * Ip["30-39"],
-      "40-49": death_constant * Ip["40-49"],
-      "50-59": death_constant * Ip["50-59"],
-      "60-69": death_constant * Ip["60-69"],
-      "70-79": death_constant * Ip["70-79"],
-      "80+":   death_constant * Ip["80+"]
+      "0-9":   0.00002 * Ip["0-9"]/symptomatic,
+      "10-19": 0.00006 * Ip["10-19"]/symptomatic,
+      "20-29": 0.0003 * Ip["20-29"]/symptomatic,
+      "30-39": 0.0008 * Ip["30-39"]/symptomatic,
+      "40-49": 0.0015 * Ip["40-49"]/symptomatic,
+      "50-59": 0.006 * Ip["50-59"]/symptomatic,
+      "60-69": 0.022 * Ip["60-69"]/symptomatic,
+      "70-79": 0.051 * Ip["70-79"]/symptomatic,
+      "80+":   0.093 * Ip["80+"]/symptomatic
   }
   return (Sp, Ip, Rp, H, ICU, D)
 
-# The SIR model differential equations.
-def deriv(y, t, N , beta, gamma):
-    S, I, R = y
-    dSdt = -beta * S * I / N
-    dIdt = beta * S * I / N - gamma * I
-    dRdt = gamma * I
-    return dSdt, dIdt, dRdt
-
-def compute_sir(N=1000, I0=1, R0=0, beta=1.75, gamma=0.5, days=160):
-    """
-    Total population, N.
-    Initial number of infected and recovered individuals, I0 and R0.
-    Contact rate, beta, and mean recovery rate, gamma, (in 1/days).
-    """
-    
-    # Everyone else, S0, is susceptible to infection initially.
-    S0 = N - I0 - R0
-    
-    # A grid of time points (in days)
-    #t = np.linspace(0, 160, 160)
-    t = np.linspace(0, days, days)
-
-    # Initial conditions vector
-    y0 = S0, I0, R0
-    # Integrate the SIR equations over the time grid, t.
-    ret = odeint(deriv, y0, t, args=(N, beta, gamma))
-    S, I, R = ret.T
-
-    return (S, I, R)
-
-def plot_sir(S, I, R, days):
-    # Plot the data on three separate curves for S(t), I(t) and R(t)
-    t = np.linspace(0, days, days)
-    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
-    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
-    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-    legend = plt.legend()
-    legend.get_frame().set_alpha(0.5)
-
-
-#### BEGIN COLOCAR NA VIEW
-days = 200
-infected = 17
-
-S, I, R = compute_sir(N=population_total, I0=infected, days=days)
-plot_sir(S, I, R, days)
-
-Sp, Ip, Rp, H, ICU, D = proportions(S, I, R)
-
-for k, v in D.items():
-  print(k, sum(D[k]))
-
-for k, v in Ip.items():
-  for idx, _infected in enumerate(v):
-    if _infected > beds:
-      print(k, idx)
-      break
-#### END
-
-
-#### BEGIN SEIR BÁSICO
-def base_seir_model(init_vals, params, t):
+def seir_model_with_soc_dist_adap(init_vals, params, t, N, changes, population_proportion):
     S_0, E_0, I_0, R_0 = init_vals
     S, E, I, R = [S_0], [E_0], [I_0], [R_0]
-    alpha, beta, gamma = params
+    L = np.zeros(len(t))
+    U = np.zeros(len(t))
+    alpha, beta, gamma, rho_iso, rho_relax = params
     dt = t[1] - t[0]
-    for _ in t[1:]:
-        next_S = S[-1] - (beta*S[-1]*I[-1])*dt
-        next_E = E[-1] + (beta*S[-1]*I[-1] - alpha*E[-1])*dt
-        next_I = I[-1] + (alpha*E[-1] - gamma*I[-1])*dt
-        next_R = R[-1] + (gamma*I[-1])*dt
-        S.append(next_S)
-        E.append(next_E)
-        I.append(next_I)
-        R.append(next_R)
-    S = np.array(S)*population_total
-    E = np.array(E)*population_total
-    I = np.array(I)*population_total
-    R = np.array(R)*population_total
-    return (S, E, I, R)
+    rho = rho_iso
+    isolated = True
+    next_change=0
+    k=0
+    for today in t[1:]:
+      #print(today)
+      if next_change<len(changes):
+        if today == changes[next_change]:
+          next_change=next_change+1
+          if isolated:
+            isolated=False
+            rho = rho_relax
+          else:
+            isolated=True
+            rho = rho_iso
+      next_S = S[-1] - (rho*beta*S[-1]*I[-1])*dt
+      next_E = E[-1] + (rho*beta*S[-1]*I[-1] - alpha*E[-1])*dt
+      next_I = I[-1] + (alpha*E[-1] - gamma*I[-1])*dt
+      next_R = R[-1] + (gamma*I[-1])*dt
+      Sp, Ip, Rp, H, ICU, D = proportions(next_S, (alpha*E[-1])*dt, next_R, population_proportion)
+      S.append(next_S)
+      E.append(next_E)
+      I.append(next_I)
+      R.append(next_R)
 
-def plot_seir(S, E, I, R, days):
-    # Plot the data on three separate curves for S(t), E(t), I(t) and R(t)
-    t = np.linspace(0, days, days)
-    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
-    plt.plot(t, E/1000, 'k', alpha=0.5, lw=2, label='Exposed')
-    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
-    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-    legend = plt.legend()
-    legend.get_frame().set_alpha(0.5)
-#### END SEIR BÁSICO
+      L_total = 0
+      for age, population in H.items():
+        L_total += population
+      for day in range(k,k+8):
+        if(day<L.size):
+         L[day] += L_total*N
 
-#### BEGIN COLOCAR NA VIEW
-# Define parameters
-t_max = 200
-dt = 1
-t = np.linspace(0, t_max, int(t_max/dt) + 1)
-N = population_total
-init_vals = 1 - 1/N, 1/N, 0, 0
-alpha = 0.2
-beta = 1.75
-gamma = 0.5
-params = alpha, beta, gamma
-# Run simulation
-S, E, I, R = base_seir_model(init_vals, params, t)
+      U_total = 0
+      for age, population in ICU.items():
+        U_total += population
+      for day in range(k+3,k+13): # soma os dias de UTI
+        if(day<U.size):
+         U[day] += U_total*N
+      for day in range(k+3,k+8): # subtrai dias do leito que está na UTI
+        if(day<U.size):
+         L[day] -= U_total*N
+      for day in range(k+13,k+16): # soma dias finais de leito dos que foram pra UTI
+        if(day<U.size):
+         L[day] += U_total*N
 
-plot_seir(S, E, I, R, int(t_max/dt)+1)
-
-Sp, Ip, Rp, H, ICU, D = proportions(S, I, R)
-
-for k, v in D.items():
-  print(k, sum(D[k]))
-#### END COLOCAAR NA VIEW
-
-#### BEGIN SEIR COM DISTANCIAMENTO SOCIAL
-def seir_model_with_soc_dist(init_vals, params, t, N):
-    S_0, E_0, I_0, R_0 = init_vals
-    S, E, I, R = [S_0], [E_0], [I_0], [R_0]
-    alpha, beta, gamma, rho = params
-    dt = t[1] - t[0]
-    for _ in t[1:]:
-        next_S = S[-1] - (rho*beta*S[-1]*I[-1])*dt
-        next_E = E[-1] + (rho*beta*S[-1]*I[-1] - alpha*E[-1])*dt
-        next_I = I[-1] + (alpha*E[-1] - gamma*I[-1])*dt
-        next_R = R[-1] + (gamma*I[-1])*dt
-        S.append(next_S)
-        E.append(next_E)
-        I.append(next_I)
-        R.append(next_R)
+      k=k+1
     S = np.array(S)*N
     E = np.array(E)*N
     I = np.array(I)*N
     R = np.array(R)*N
-    return (S, E, I, R)
+    return (S, E, I, R, L,U)
 
-def plot_seir_with_soc_dist(S, E, I, R, days):
+def plot_seir_with_soc_dist2(S, E, I, R, L, U,days):
     # Plot the data on three separate curves for S(t), E(t), I(t) and R(t)
     t = np.linspace(0, days, days)
-    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
-    plt.plot(t, E/1000, 'k', alpha=0.5, lw=2, label='Exposed')
-    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
-    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-    plt.grid
+
+
+    plt.subplot(1, 2, 1)
+    plt.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Suscetíveis')
+    plt.plot(t, E/1000, 'k', alpha=0.5, lw=2, label='Em incubação')
+    plt.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Doentes')
+    plt.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recuperados com imunidade')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(t, L, 'y', alpha=0.5, lw=2, label='Leitos ocupados')
+    plt.plot(t, U, 'm', alpha=0.5, lw=2, label='UTIs ocupadas')
+  #  plt.ylim([0,125])
     legend = plt.legend()
     legend.get_frame().set_alpha(0.5)
-#### END SEIR COM DISTANCIAMENTO SOCIAL
-
-#### BEGIN COLOCAR NA VIEW
-# Define parameters
-t_max = 200
-dt = 1
-t = np.linspace(0, t_max, int(t_max/dt) + 1)
-N = population_total
-infected = 300
-init_vals = 1-infected/N, 0, infected/N, 0
-alpha = 0.2
-beta = 1.75
-gamma = 0.5
-rho = 1  # social distancing: 0=all quarentined, 1=free to walk
-params = alpha, beta, gamma, rho
-# Run simulation
-S, E, I, R = seir_model_with_soc_dist(init_vals, params, t, N)
-
-plot_seir(S, E, I, R, int(t_max/dt)+1)
-#### END COLOCAR NA VIEW
-
-#### BEGIN NÃO SEI O QUE SIGNIFICA
-
-#### END NÃO SEI O QUE SIGNIFICA
+#### END SEIR COM DISTANCIAMENT SOCIAL ADAPTATIVO

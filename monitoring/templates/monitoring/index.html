@@ -2,8 +2,9 @@
 
 {% load static %}
 {% load crispy_forms_filters %}
-
+{% load static %}
 {% block content %}
+    <!-- >Modal de cadastro de atendimento < -->
     <div id="monitoring-create" class="modal" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -13,10 +14,30 @@
                 </div>
 
                 <div class="modal-body">
+                    <!-- >Essa parte ficou aqui por que quando apertava o botão ele enviava o form<!-->
+                    <label for="id_profile_0" class=" requiredField">
+                       Paciente <span class="asteriskField">*</span>
+                    </label>
+                    <div class="form-inline mb-2">
+                        <input id="search-profile" class="form-control col-6 mr-2 " name="term"
+                           placeholder="Nome, CPF, RG...">
+                        <div class="col-4">
+                            <button id="search_profile_button" class="btn btn-secondary">Pesquisar</button>
+                        </div>
+                    </div>
                     <form id="monitoring-create-form" method="post"
                           action="{% url 'monitoring:monitoring-create' %}">
                         {% csrf_token %}
-                        {{ monitoring_create_form|crispy }}
+                        <div id="div_id_profile" class="form-group">
+                                <!-- aqui vem os profiles encontrados><!-->
+                                <div id="profiles">
+
+                                </div>
+                        </div>
+                        {{ monitoring_create_form.tested|as_crispy_field }}
+                        {{ monitoring_create_form.suspect|as_crispy_field }}
+                        {{ monitoring_create_form.virus_exposure|as_crispy_field }}
+                        {{ monitoring_create_form.result|as_crispy_field }}
                         <hr>
                         <h6>Sintomas</h6>
                         {{ symptom_formset.management_form }}
@@ -38,6 +59,7 @@
         </div>
     </div>
 
+    <!-- >Seção de pacientes < -->
     <div class="row justify-content-between my-2">
         <h4 class="col-4">Pacientes</h4>
         <div class="col-3">
@@ -45,6 +67,7 @@
         </div>
     </div>
 
+    <!-- >Barra de busca de paciente(s) < -->
     <div class="">
         <form method="get" class="form-inline mb-2">
             <input type="hidden" name="search-target" value="profile">
@@ -54,10 +77,10 @@
             <div class="col">
                 <input type="submit" class="btn btn-secondary" value="Pesquisar">
             </div>
-
         </form>
     </div>
 
+    <!-- >Lista de pacientes no sistema < -->
     <ul class="list-group">
         {% for profile in profile_list %}
             <li class="list-group-item">
@@ -70,6 +93,7 @@
 
     <hr>
 
+    <!-- >Tabela de últimos atendimentos < -->
     <div class="row justify-content-between">
         <h4 class="col-auto">Últimos atendimentos</h4>
         <div class="col-auto">
@@ -77,6 +101,7 @@
             </button>
         </div>
     </div>
+
     <div class="row-col my-2">
         <div style="overflow-x: auto;">
             <table class="table table-hover">
@@ -106,4 +131,6 @@
             </table>
         </div>
     </div>
+
+    <script src="{% static 'scripts/monitoring_create.js' %}"></script>
 {% endblock %}

@@ -4,12 +4,14 @@ Ferramenta de coleta de dados.
 
 **EM DESENVOLVIMENTO**
 
-Screenshots (dados fictícios):
+[Quem somos](/projeto/covid-19_alagoas.pdf)
 
-![tela_inicial](/screenshots/tela_inicial.png)
+Screenshots da ferramenta (dados fictícios):
 
-![atendimento](/screenshots/atendimento.png)
+![tela_inicial](/projeto/tela_inicial.png)
 
-![mapa](/screenshots/mapa.png)
+![atendimento](/projeto/atendimento.png)
 
-![dashboard](/screenshots/dashboard.png)
+![mapa](/projeto/mapa.png)
+
+![dashboard](/projeto/dashboard.png)

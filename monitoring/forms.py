@@ -12,6 +12,9 @@ class MonitoringForm(forms.ModelForm):
         labels = {
             'profile': 'Paciente'
         }
+        widgets = {
+            'profile': forms.widgets.RadioSelect
+        }
 
 
 class SymptomCreateForm(forms.ModelForm):

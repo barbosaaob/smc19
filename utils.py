@@ -30,10 +30,10 @@ def run(suspect=900, sick=240, hospital=48, icu=12, seed=42):
     # random number vector with sum 1
     distribution = np.random.dirichlet(np.ones(len(cities)), size=1)[0]
     for i, city in enumerate(cities):
-        create_dummy_profiles(int(data["suspect"]*distribution[i]), suspect=True, city=city)
-        create_dummy_profiles(int(data["sick"]*distribution[i]), result="PO", city=city)
-        create_dummy_profiles(int(data["hospital"]*distribution[i]), result="PO", city=city)
-        create_dummy_profiles(int(data["icu"]*distribution[i]), result="PO", city=city)
+        create_dummy_profiles(int(data["suspect"]*distribution[i]), suspect=True, city=city[0])
+        create_dummy_profiles(int(data["sick"]*distribution[i]), result="PO", city=city[0])
+        create_dummy_profiles(int(data["hospital"]*distribution[i]), result="PO", city=city[0])
+        create_dummy_profiles(int(data["icu"]*distribution[i]), result="PO", city=city[0])
 
     print("Feito.")
 

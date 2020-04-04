@@ -9,3 +9,6 @@ numpy==1.18.2
 psycopg2==2.8.4
 pytz==2019.3
 sqlparse==0.3.1
+scipy==1.4.1
+six==1.14.0
+matplotlib==3.2.1

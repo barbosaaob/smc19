@@ -5,11 +5,14 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy, reverse
 from django.views import generic
+from django.http import JsonResponse
 
 from monitoring import choices
 from . import forms
 from . import models
 from . import utils
+
+from prediction.models import HealthCenter, HealthCenterStatus
 
 
 # Create your views here.
@@ -93,7 +96,7 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
 
         print(stats)
 
-        context['stats'] = {
+        context['territory_stats'] = {
             'total': {
                 'suspect_cases': total[1],
                 'confirmed_cases': total[2],
@@ -113,6 +116,21 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
             }
 
         }
+
+        context['health_center_stats'] = [{
+            "healthCenterName": u.center_name,
+            "latitude": u.latitude,
+            "longitude": u.longitude,
+            "healthCenterStatus": {
+                "beds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "intensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "respirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedBeds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedIntensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedRespirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "date": str(HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].date) if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else '2020-01-01'
+            }
+        } for u in HealthCenter.objects.all()]
 
         return context
 
@@ -165,7 +183,16 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
         return context
 
 
-# Profile
+#Profile
+class ProfileSearch(mixins.LoginRequiredMixin, generic.CreateView):
+    model = models.Profile
+    def get(self, request, *args, **kwargs):
+        search_term = self.kwargs['term']
+        profiles = list(models.Profile.objects.filter(Q(full_name__startswith=search_term) |
+                                                    Q(id_document__startswith=search_term) |
+                                                    Q(cpf__startswith=search_term) |
+                                                    Q(cns__startswith=search_term)).values())
+        return JsonResponse(profiles, safe=False)
 
 class ProfileCreate(mixins.LoginRequiredMixin, generic.CreateView):
     form_class = forms.ProfileForm
