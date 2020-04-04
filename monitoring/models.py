@@ -37,8 +37,6 @@ class Profile(models.Model):
 
     comorbidities = BitField(verbose_name='Comorbidades', flags=choices.comorbidities, default=0)
 
-    status = models.CharField(verbose_name='Status', max_length=1, choices=choices.status, default='N')
-
     def __str__(self):
         return self.full_name
 
@@ -82,30 +80,17 @@ class Monitoring(models.Model):
 
     profile = models.ForeignKey(Profile, models.CASCADE)
     tested = models.BooleanField(verbose_name='Já foi testado', blank=True, default=False)
-    date = models.DateField(verbose_name='Data', auto_now_add=True)
     suspect = models.BooleanField(verbose_name='Suspeito de COVID-19', default=False)
+    status = models.CharField(verbose_name='Status', max_length=1, choices=choices.status, blank=True)
     virus_exposure = BitField(verbose_name='Exposição COVID-19', flags=choices.exposure, blank=True, default=0)
     result = models.CharField(verbose_name='Resultado do exame', max_length=2, choices=choices.results, default='SR')
     created = models.DateTimeField(auto_now_add=True)
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        self.update_profile_status()
-        super(Monitoring, self).save(force_insert, force_update, using, update_fields)
-
-    def update_profile_status(self):
-        if self.result == 'PO':
-            self.profile.status = 'C'
-        elif self.suspect:
-            self.profile.status = 'S'
-
-        self.profile.save()
 
     def get_absolute_url(self):
         return reverse('monitoring:monitoring-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
-        return '%s (%s)' % (self.profile, self.date.strftime('%d/%m/%Y'))
+        return '%s (%s)' % (self.profile, self.created.strftime('%d/%m/%Y'))
 
 
 class Symptom(models.Model):

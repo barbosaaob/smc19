@@ -6,7 +6,7 @@ from prediction.models import HealthCenter
 
 
 class Command(BaseCommand):
-    help =  'python manage.py populate_db static/data/unidadessaude.json'
+    help = 'python manage.py populate_db static/data/unidadessaude.json'
     
     def add_arguments(self, parser):
         parser.add_argument('source_path', nargs=1, type=str)

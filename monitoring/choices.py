@@ -272,14 +272,12 @@ results = [
 ]
 
 status = (
-    ('N', 'Normal'),
-    ('T', 'Testado'),
-    ('S', 'Suspeito'),
-    ('C', 'Confirmado'),
-    ('M', 'Morto'),
     ('I', 'Imune'),
+    ('N', 'Normal'),
     ('H', 'Hospitalizado'),
-    ('U', 'UTI')
+    ('U', 'UTI'),
+    ('R', 'Recuperado'),
+    ('M', 'Morto'),
 )
 
 action_choices = (

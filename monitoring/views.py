@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import mixins
-from django.db.models import Count, Q, Avg
+from django.db import connection
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy, reverse
 from django.views import generic
@@ -10,6 +11,8 @@ from monitoring import choices
 from . import forms
 from . import models
 from . import utils
+
+from prediction.models import HealthCenter, HealthCenterStatus
 
 
 # Create your views here.
@@ -39,9 +42,9 @@ class Index(mixins.LoginRequiredMixin, generic.ListView):
         context['monitoring_create_form'] = forms.MonitoringForm()
         symptoms_initial = [{'symptom': symptom[0], 'label': symptom[1]} for symptom in choices.symptoms]
         context['symptom_formset'] = forms.SymptomInlineFormset(initial=symptoms_initial)
-        context['status_form'] = forms.ProfileStatusForm()
 
         return context
+
 
 class Map(mixins.LoginRequiredMixin, generic.TemplateView):
     template_name = 'monitoring/map.html'
@@ -52,26 +55,90 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
         params = {key: value for key, value in self.request.GET.items() if value != '' and value != 0}
         context['params'] = params
 
-        query = {
-            'suspect_cases': Count('profile__status', filter=Q(profile__status='S')),
-            'confirmed_cases': Count('profile__status', filter=Q(profile__status='C')),
-            'deaths': Count('profile__status', filter=Q(profile__status='M')),
-            'people_average': Avg('people'),
-            'smokers': Count('profile__smoker', filter=Q(profile__smoker=True)),
-            'vaccinated': Count('profile__vaccinated', filter=Q(profile__vaccinated=True)),
-        }
-        stats_per_city = models.Address.objects.filter(primary=True).values('city').filter(
-            **params).annotate(**query)
+        sql_query = '''
+        SELECT 
+            monitoring_address.city,
+            SUM(last_monitorings.suspect) AS suspect_cases, 
+            SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
+            SUM(CASE  WHEN last_monitorings.result = 'M' THEN 1 ELSE 0 END) AS deaths,
+            AVG(monitoring_address.people) as people_average,
+            SUM(monitoring_profile.smoker) AS smokers
+        FROM 
+            monitoring_profile 
+            JOIN 
+                (
+                SELECT 
+                    monitoring_monitoring.*,
+                    MAX(monitoring_monitoring.created) AS latest_date 
+                FROM
+                    monitoring_monitoring 
+                GROUP BY
+                    monitoring_monitoring.profile_id
+                ) last_monitorings
+            ON 
+                monitoring_profile.id = last_monitorings.profile_id
+            JOIN 
+                monitoring_address
+            ON
+                monitoring_profile.id = monitoring_address.profile_id 
+        WHERE 
+            monitoring_address."primary" = 1
+        
+        '''
 
-        context['stats'] = {
-            'total': models.Address.objects.filter(primary=True, **params).aggregate(**query),
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query)
+            total = cursor.fetchone()
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query + ' GROUP BY monitoring_address.city')
+            stats = cursor.fetchall()
+
+        print(stats)
+
+        context['territory_stats'] = {
+            'total': {
+                'suspect_cases': total[1],
+                'confirmed_cases': total[2],
+                'deaths': total[3],
+                'people_average': total[4],
+                'smokers': total[5],
+            },
             'cities': {
-                stat['city'] if 'city' in stat else stat[
-                    'neighbourhood']: stat for stat in
-                stats_per_city}
+                stat[0]: {
+                    'suspect_cases': stat[1],
+                    'confirmed_cases': stat[2],
+                    'deaths': stat[3],
+                    'people_average': stat[4],
+                    'smokers': stat[5],
+                }
+                for stat in stats
+            }
+
         }
+
+        '''
+        O P E R A Ç Ã O   L A V A   C Ó D I G O
+        As consultas abaixo estão extremamente ineficientes(cada HealthCenterStatus.objects.filter(...) faz uma consulta 
+        (e ordena) ao banco para no final só pegar um campo de cada vez) além de estar ilegível
+        '''
+        context['health_center_stats'] = [{
+            "healthCenterName": u.center_name,
+            "latitude": u.latitude,
+            "longitude": u.longitude,
+            "healthCenterStatus": {
+                "beds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "intensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "respirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedBeds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedIntensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedRespirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "date": str(HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].date) if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else '2020-01-01'
+            }
+        } for u in HealthCenter.objects.all()]
 
         return context
+
 
 class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
     template_name = 'monitoring/dashboard.html'
@@ -79,17 +146,49 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
     def get_context_data(self):
         context = super(Dashboard, self).get_context_data()
 
-        query = {
-            'suspect_cases': Count('profile__status', filter=Q(profile__status='S')),
-            'confirmed_cases': Count('profile__status', filter=Q(profile__status='C')),
-            'deaths': Count('profile__status', filter=Q(profile__status='M')),
-            'people_average': Avg('people'),
-            'smokers': Count('profile__smoker', filter=Q(profile__smoker=True)),
-            'vaccinated': Count('profile__vaccinated', filter=Q(profile__vaccinated=True)),
-        }
+        sql_query = '''
+        SELECT  
+            SUM(last_monitorings.suspect) AS suspect_cases, 
+            SUM(monitoring_profile.smoker) AS smokers,
+            SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
+            SUM(CASE  WHEN last_monitorings.result = 'M' THEN 1 ELSE 0 END) AS deaths,
+            AVG(monitoring_address.people) as people_average
+        FROM 
+            monitoring_profile 
+            JOIN 
+                (
+                SELECT 
+                    monitoring_monitoring.*,
+                    MAX(monitoring_monitoring.created) AS latest_date 
+                FROM
+                    monitoring_monitoring 
+                GROUP BY
+                    monitoring_monitoring.profile_id
+                ) last_monitorings
+            ON 
+                monitoring_profile.id = last_monitorings.profile_id
+            JOIN 
+                monitoring_address
+            ON
+                monitoring_profile.id = monitoring_address.profile_id 
+        WHERE 
+            monitoring_address."primary" = 1
+        GROUP BY 
+            monitoring_address.city
+        '''
 
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query)
+            stats = cursor.fetchone()
+        print(stats)
         context['stats'] = {
-            'total': models.Address.objects.filter(primary=True).aggregate(**query),
+            'total': {
+                'suspect_cases': stats[0],
+                'confirmed_cases': stats[1],
+                'deaths': stats[2],
+                'people_average': stats[3],
+                'smokers': stats[4],
+            }
         }
 
         return context
@@ -189,12 +288,6 @@ class ProfileUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
         return reverse('monitoring:profile-detail', args=[self.kwargs['pk']])
 
 
-class ProfileStatusUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
-    model = models.Profile
-    form_class = forms.ProfileStatusForm
-    success_url = reverse_lazy('monitoring:index')
-
-
 class ProfileDelete(mixins.LoginRequiredMixin, generic.DeleteView):
     model = models.Profile
     success_url = reverse_lazy('monitoring:index')
@@ -285,7 +378,6 @@ class MonitoringCreate(mixins.LoginRequiredMixin, generic.CreateView):
     model = models.Monitoring
     form_class = forms.MonitoringForm
 
-
     def get_context_data(self, **kwargs):
         context = super(MonitoringCreate, self).get_context_data(**kwargs)
 
@@ -305,7 +397,6 @@ class MonitoringCreate(mixins.LoginRequiredMixin, generic.CreateView):
 
         if symptom_formset.is_valid():
             self.object = form.save(commit=True)
-            self.object.update_profile_status()
 
             for formset in symptom_formset:
                 instance = formset.save(commit=False)
@@ -348,7 +439,6 @@ class MonitoringUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
 
         if symptom_formset.is_valid():
             self.object = form.save(commit=True)
-            self.object.update_profile_status()
 
             for formset in symptom_formset:
                 instance = formset.save(commit=False)
