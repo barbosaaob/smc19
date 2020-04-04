@@ -149,10 +149,10 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
         sql_query = '''
         SELECT  
             SUM(last_monitorings.suspect) AS suspect_cases, 
-            SUM(monitoring_profile.smoker) AS smokers,
             SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
             SUM(CASE  WHEN last_monitorings.result = 'M' THEN 1 ELSE 0 END) AS deaths,
-            AVG(monitoring_address.people) as people_average
+            AVG(monitoring_address.people) as people_average,
+            SUM(monitoring_profile.smoker) AS smokers
         FROM 
             monitoring_profile 
             JOIN 
@@ -181,6 +181,34 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
             cursor.execute(sql_query)
             stats = cursor.fetchone()
         print(stats)
+
+        beds_sql_query = '''
+        SELECT 
+	        SUM(last_status.beds) AS beds,
+            SUM(last_status.occupied_beds) AS occupied_beds,
+            SUM(last_status.icus) AS icus,
+            SUM(last_status.occupied_icus) AS occupied_icus,
+            SUM(last_status.respirators) AS respirators,
+            SUM(last_status.occupied_respirators) AS occupied_respirators
+        FROM 
+            prediction_healthcenter
+            JOIN 
+            (
+                SELECT 
+                    prediction_healthcenterstatus.*,
+                    MAX(id) AS last_status_id
+                FROM 
+                    prediction_healthcenterstatus
+                GROUP BY prediction_healthcenterstatus.health_center_id
+            ) last_status
+            ON
+		last_status.health_center_id = prediction_healthcenter.id
+        '''
+
+        with connection.cursor() as cursor:
+            cursor.execute(beds_sql_query)
+            beds = cursor.fetchone()
+
         context['stats'] = {
             'total': {
                 'suspect_cases': stats[0],
@@ -189,6 +217,10 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
                 'people_average': stats[3],
                 'smokers': stats[4],
             }
+        }
+        bed_columns = ('beds', 'occupied_beds', 'icus', 'occupied_icus', 'respirators', 'occupied_respirators')
+        context['occupation'] = {
+            column: beds[i] for i, column in enumerate(bed_columns)
         }
 
         return context
