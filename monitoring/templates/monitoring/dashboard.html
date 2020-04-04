@@ -9,20 +9,16 @@
             position: absolute;
         }
 
-        .arc.dimmed {
-            opacity: 0.5;
-        }
-
         .arc path {
-            opacity: 75%;
+            opacity: 80%;
         }
 
         .arc text {
             opacity: 100%;
         }
 
-        .arc:hover path {
-            opacity: 50%;
+        .arwqac:hover path {
+            opacity: 75%;
         }
 
         .arc.active:hover path {
@@ -83,11 +79,14 @@
 
 
     {{ stats|json_script:'stats' }}
+    {{ occupation|json_script:'occupation' }}
 
     <script src="{% static 'scripts/charts.js' %}"></script>
     <script>
         const stats = JSON.parse(document.getElementById("stats").textContent);
         const total = stats.total;
+
+        const occupation = JSON.parse(document.getElementById("occupation").textContent);
 
         function draw() {
             barChart("#bar-1", [
@@ -101,14 +100,19 @@
                 xAxis: {label: "Status",},
                 yAxis: {label: "Casos"},
             });
+
+            console.log(occupation);
+
             pieChart("#pie-1", [
-                {label: "RETs disponíveis", value: 29},
-                {label: "RETs ocupados", value: 10},
-                {label: "UTIs disponíveis", value: 17},
-                {label: "UTIs ocupados", value: 17},
+                {label: "RETs disponíveis", value: occupation.beds},
+                {label: "RETs ocupados", value: occupation.occupied_beds},
+                {label: "UTIs disponíveis", value: occupation.icus},
+                {label: "UTIs ocupados", value: occupation.occupied_icus},
+                {label: "Respiradors disponíveis", value: occupation.respirators},
+                {label: "Respiradores ocupados", value: occupation.occupied_respirators},
             ], {
-                title: "Ocupação de leitos",
-                colors: ["lightgreen", "khaki", "salmon", "firebrick"],
+                title: "Ocupação de leitos em Alagoas",
+                colors: ["lightgreen", "orange", "salmon", "firebrick", "steelblue", "purple"],
                 innerRadius: 30,
             });
         }

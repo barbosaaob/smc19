@@ -201,7 +201,7 @@ function pieChart(selector, data, options) {
     // Legend
     g.append("rect")
         .attr("transform", function (d, i) {
-            return `translate(${outerRadius + margin.right}, ${-height / data.length + 30 * i})`;
+            return `translate(${outerRadius + margin.right}, ${-15 * data.length + 30 * i})`;
         })
         .attr("width", 20)
         .attr("height", 10)
@@ -210,7 +210,7 @@ function pieChart(selector, data, options) {
         });
     g.append("text")
         .attr("transform", function (d, i) {
-            return `translate(${25 + outerRadius + margin.bottom}, ${-height / data.length + 10 + 30 * i})`;
+            return `translate(${25 + outerRadius + margin.bottom}, ${-15 * data.length + 10 + 30 * i})`;
         })
         .text(function (d) {
             return d.data.label
