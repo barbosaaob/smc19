@@ -92,10 +92,6 @@ class ProfileForm(forms.ModelForm):
             'birth_date': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
         }
 
-class ProfileStatusForm(forms.ModelForm):
-    class Meta:
-        model = models.Profile
-        fields = ['status']
 
 class RequestForm(forms.ModelForm):
     class Meta:

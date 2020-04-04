@@ -73,23 +73,23 @@
             </div>
             <div class="col-auto mr-2 p-0 mb-2">
                 <label for="age-group-min" style="display: none;">De</label>
-                <input id="age-group-min" type="hidden" name="profile__age__gte" class="form-control" min="0" max="120"
-                       value="{{ params.profile__age__gte }}" placeholder="De...">
+                <input id="age-group-min" type="hidden" name="age__gte" class="form-control" min="0" max="120"
+                       value="{{ params.age__gte }}" placeholder="De...">
             </div>
             <div class="col-auto mr-0 p-0 mb-2">
                 <label for="age-group-max" style="display: none;">Até</label>
-                <input id="age-group-max" type="hidden" name="profile__age__lte" class="form-control" min="0" max="120"
-                       value="{{ params.profile__age__lte }}" placeholder="Até...">
+                <input id="age-group-max" type="hidden" name="age__lte" class="form-control" min="0" max="120"
+                       value="{{ params.age__lte }}" placeholder="Até...">
             </div>
 
             <div class="col-auto mr-2 mb-2">
                 <label for="gender-select">Sexo</label>
-                <select id="gender-select" class="form-control" name="profile__gender">
-                    <option value="" {% ifequal params.profile__gender '' %}selected{% endifequal %}>Todos</option>
-                    <option value="F" {% ifequal params.profile__gender 'F' %}selected{% endifequal %}>Feminino</option>
-                    <option value="M" {% ifequal params.profile__gender 'M' %}selected{% endifequal %}>Masculino
+                <select id="gender-select" class="form-control" name="gender">
+                    <option value="" {% ifequal params.gender '' %}selected{% endifequal %}>Todos</option>
+                    <option value="F" {% ifequal params.gender 'F' %}selected{% endifequal %}>Feminino</option>
+                    <option value="M" {% ifequal params.gender 'M' %}selected{% endifequal %}>Masculino
                     </option>
-                    <option value="O" {% ifequal params.profile__gender 'O' %}selected{% endifequal %}>Não quer
+                    <option value="O" {% ifequal params.gender 'O' %}selected{% endifequal %}>Não quer
                         declarar
                     </option>
                 </select>
@@ -97,22 +97,22 @@
 
             <div class="col-auto mr-0 mb-2">
                 <label for="smoker-select">Fumante</label>
-                <select id="smoker-select" class="form-control" name="profile__smoker">
-                    <option value="" {% ifequal params.profile__smoker '' %}selected{% endifequal %}>Todos</option>
-                    <option value="True" {% ifequal params.profile__smoker 'True' %}selected{% endifequal %}>Sim
+                <select id="smoker-select" class="form-control" name="smoker">
+                    <option value="" {% ifequal params.smoker '' %}selected{% endifequal %}>Todos</option>
+                    <option value="True" {% ifequal params.smoker 'True' %}selected{% endifequal %}>Sim
                     </option>
-                    <option value="False" {% ifequal params.profile__smoker 'False' %}selected{% endifequal %}>Não
+                    <option value="False" {% ifequal params.smoker 'False' %}selected{% endifequal %}>Não
                     </option>
                 </select>
             </div>
 
             <div class="col-auto mr-0 mb-2">
                 <label for="vaccinated-select">Vacinado contra gripe em 2020</label>
-                <select id="vaccinated-select" class="form-control" name="profile__vaccinated">
-                    <option value="" {% ifequal params.profile__vaccinated '' %}selected{% endifequal %}>Todos</option>
-                    <option value="True" {% ifequal params.profile__vaccinated 'True' %}selected{% endifequal %}>Sim
+                <select id="vaccinated-select" class="form-control" name="vaccinated">
+                    <option value="" {% ifequal params.vaccinated '' %}selected{% endifequal %}>Todos</option>
+                    <option value="True" {% ifequal params.vaccinated 'True' %}selected{% endifequal %}>Sim
                     </option>
-                    <option value="False" {% ifequal params.profile__vaccinated 'False' %}selected{% endifequal %}>Não
+                    <option value="False" {% ifequal params.vaccinated 'False' %}selected{% endifequal %}>Não
                     </option>
                 </select>
             </div>
@@ -138,14 +138,14 @@
     <!-- Filtro de faixa etária -->
     <script>
         $(document).ready(function () {
-            const ageMin = $("input[name='profile__age__gte']");
-            const ageMax = $("input[name='profile__age__lte']");
+            const ageMin = $("input[name='age__gte']");
+            const ageMax = $("input[name='age__lte']");
             const ageSelect = $("#age-group-select");
 
 
-            if ("{{ params.profile__age__gte }}" !== "" && "{{ params.profile__age__lte }}" !== "") {
-                const min = parseInt("{{ params.profile__age__gte }}");
-                const max = parseInt("{{ params.profile__age__lte }}");
+            if ("{{ params.age__gte }}" !== "" && "{{ params.age__lte }}" !== "") {
+                const min = parseInt("{{ params.age__gte }}");
+                const max = parseInt("{{ params.age__lte }}");
 
                 console.log(min, max);
 
@@ -161,10 +161,10 @@
                     $("label[for=" + ageMax.attr("id") + "]").show();
                 }
 
-            } else if (("{{ params.profile__age__gte }}" !== "" && "{{ params.profile__age__lte }}" === "") ||
-                ("{{ params.profile__age__gte }}" === "" && "{{ params.profile__age__lte }}" !== "")) {
-                ageMin.val("{{ params.profile__age__gte }}");
-                ageMax.val("{{ params.profile__age__lte }}");
+            } else if (("{{ params.age__gte }}" !== "" && "{{ params.age__lte }}" === "") ||
+                ("{{ params.age__gte }}" === "" && "{{ params.age__lte }}" !== "")) {
+                ageMin.val("{{ params.age__gte }}");
+                ageMax.val("{{ params.age__lte }}");
             }
 
             ageSelect.on("change", function () {

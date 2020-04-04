@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import mixins
-from django.db.models import Count, Q, Avg
+from django.db import connection
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy, reverse
 from django.views import generic
@@ -38,7 +39,6 @@ class Index(mixins.LoginRequiredMixin, generic.ListView):
         context['monitoring_create_form'] = forms.MonitoringForm()
         symptoms_initial = [{'symptom': symptom[0], 'label': symptom[1]} for symptom in choices.symptoms]
         context['symptom_formset'] = forms.SymptomInlineFormset(initial=symptoms_initial)
-        context['status_form'] = forms.ProfileStatusForm()
 
         return context
 
@@ -52,23 +52,66 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
         params = {key: value for key, value in self.request.GET.items() if value != '' and value != 0}
         context['params'] = params
 
-        query = {
-            'suspect_cases': Count('profile__status', filter=Q(profile__status='S')),
-            'confirmed_cases': Count('profile__status', filter=Q(profile__status='C')),
-            'deaths': Count('profile__status', filter=Q(profile__status='M')),
-            'people_average': Avg('people'),
-            'smokers': Count('profile__smoker', filter=Q(profile__smoker=True)),
-            'vaccinated': Count('profile__vaccinated', filter=Q(profile__vaccinated=True)),
-        }
-        stats_per_city = models.Address.objects.filter(primary=True).values('city').filter(
-            **params).annotate(**query)
+        sql_query = '''
+        SELECT 
+            monitoring_address.city,
+            SUM(last_monitorings.suspect) AS suspect_cases, 
+            SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
+            SUM(CASE  WHEN last_monitorings.result = 'M' THEN 1 ELSE 0 END) AS deaths,
+            AVG(monitoring_address.people) as people_average,
+            SUM(monitoring_profile.smoker) AS smokers
+        FROM 
+            monitoring_profile 
+            JOIN 
+                (
+                SELECT 
+                    monitoring_monitoring.*,
+                    MAX(monitoring_monitoring.created) AS latest_date 
+                FROM
+                    monitoring_monitoring 
+                GROUP BY
+                    monitoring_monitoring.profile_id
+                ) last_monitorings
+            ON 
+                monitoring_profile.id = last_monitorings.profile_id
+            JOIN 
+                monitoring_address
+            ON
+                monitoring_profile.id = monitoring_address.profile_id 
+        WHERE 
+            monitoring_address."primary" = 1
+        
+        '''
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query)
+            total = cursor.fetchone()
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query + ' GROUP BY monitoring_address.city')
+            stats = cursor.fetchall()
+
+        print(stats)
 
         context['stats'] = {
-            'total': models.Address.objects.filter(primary=True, **params).aggregate(**query),
+            'total': {
+                'suspect_cases': total[1],
+                'confirmed_cases': total[2],
+                'deaths': total[3],
+                'people_average': total[4],
+                'smokers': total[5],
+            },
             'cities': {
-                stat['city'] if 'city' in stat else stat[
-                    'neighbourhood']: stat for stat in
-                stats_per_city}
+                stat[0]: {
+                    'suspect_cases': stat[1],
+                    'confirmed_cases': stat[2],
+                    'deaths': stat[3],
+                    'people_average': stat[4],
+                    'smokers': stat[5],
+                }
+                for stat in stats
+            }
+
         }
 
         return context
@@ -80,18 +123,44 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
     def get_context_data(self):
         context = super(Dashboard, self).get_context_data()
 
-        query = {
-            'suspect_cases': Count('profile__status', filter=Q(profile__status='S')),
-            'confirmed_cases': Count('profile__status', filter=Q(profile__status='C')),
-            'deaths': Count('profile__status', filter=Q(profile__status='M')),
-            'people_average': Avg('people'),
-            'smokers': Count('profile__smoker', filter=Q(profile__smoker=True)),
-            'vaccinated': Count('profile__vaccinated', filter=Q(profile__vaccinated=True)),
-        }
+        sql_query = '''
+        SELECT 
+            monitoring_address.city,
+            SUM(last_monitorings.suspect) AS suspect_cases, 
+            SUM(monitoring_profile.smoker) AS smokers,
+            SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
+            SUM(CASE  WHEN last_monitorings.result = 'M' THEN 1 ELSE 0 END) AS deaths,
+            AVG(monitoring_address.people) as people_average
+        FROM 
+            monitoring_profile 
+            JOIN 
+                (
+                SELECT 
+                    monitoring_monitoring.*,
+                    MAX(monitoring_monitoring.created) AS latest_date 
+                FROM
+                    monitoring_monitoring 
+                GROUP BY
+                    monitoring_monitoring.profile_id
+                ) last_monitorings
+            ON 
+                monitoring_profile.id = last_monitorings.profile_id
+            JOIN 
+                monitoring_address
+            ON
+                monitoring_profile.id = monitoring_address.profile_id 
+        WHERE 
+            monitoring_address."primary" = TRUE
+        GROUP BY 
+            monitoring_address.city
+        '''
 
-        context['stats'] = {
-            'total': models.Address.objects.filter(primary=True).aggregate(**query),
-        }
+        all_drinks = None
+        with connection.cursor() as cursor:
+            cursor.execute(sql_query)
+            stats = cursor.fetchall()
+
+        context['stats'] = stats
 
         return context
 
@@ -179,12 +248,6 @@ class ProfileUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
 
     def get_success_url(self):
         return reverse('monitoring:profile-detail', args=[self.kwargs['pk']])
-
-
-class ProfileStatusUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
-    model = models.Profile
-    form_class = forms.ProfileStatusForm
-    success_url = reverse_lazy('monitoring:index')
 
 
 class ProfileDelete(mixins.LoginRequiredMixin, generic.DeleteView):
@@ -296,7 +359,6 @@ class MonitoringCreate(mixins.LoginRequiredMixin, generic.CreateView):
 
         if symptom_formset.is_valid():
             self.object = form.save(commit=True)
-            self.object.update_profile_status()
 
             for formset in symptom_formset:
                 instance = formset.save(commit=False)
@@ -339,7 +401,6 @@ class MonitoringUpdate(mixins.LoginRequiredMixin, generic.UpdateView):
 
         if symptom_formset.is_valid():
             self.object = form.save(commit=True)
-            self.object.update_profile_status()
 
             for formset in symptom_formset:
                 instance = formset.save(commit=False)
