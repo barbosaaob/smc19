@@ -8,7 +8,6 @@ from accounts.models import Account
 import validators
 from . import choices
 
-
 # Create your models here.
 
 class Profile(models.Model):
