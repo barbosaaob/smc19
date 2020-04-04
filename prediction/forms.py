@@ -4,6 +4,11 @@ from django.forms import inlineformset_factory
 from monitoring import choices
 from . import models
 
+class HealthCenterForm(forms.ModelForm):
+    class Meta:
+        model = models.HealthCenter
+        fields = '__all__'
+
 class HealthCenterStatusForm(forms.ModelForm):
     class Meta:
         model = models.HealthCenterStatus

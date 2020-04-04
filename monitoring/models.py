@@ -8,7 +8,6 @@ from prediction.models import HealthCenter
 import validators
 from . import choices
 
-
 # Create your models here.
 
 class Profile(models.Model):
