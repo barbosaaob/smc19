@@ -117,6 +117,11 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
 
         }
 
+        '''
+        O P E R A Ç Ã O   L A V A   C Ó D I G O
+        As consultas abaixo estão extremamente ineficientes(cada HealthCenterStatus.objects.filter(...) faz uma consulta 
+        (e ordena) ao banco para no final só pegar um campo de cada vez) além de estar ilegível
+        '''
         context['health_center_stats'] = [{
             "healthCenterName": u.center_name,
             "latitude": u.latitude,
@@ -142,8 +147,7 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
         context = super(Dashboard, self).get_context_data()
 
         sql_query = '''
-        SELECT 
-            monitoring_address.city,
+        SELECT  
             SUM(last_monitorings.suspect) AS suspect_cases, 
             SUM(monitoring_profile.smoker) AS smokers,
             SUM(CASE  WHEN last_monitorings.result = 'PO' THEN 1 ELSE 0 END) AS confirmed_cases,
@@ -173,12 +177,19 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
             monitoring_address.city
         '''
 
-        all_drinks = None
         with connection.cursor() as cursor:
             cursor.execute(sql_query)
-            stats = cursor.fetchall()
-
-        context['stats'] = stats
+            stats = cursor.fetchone()
+        print(stats)
+        context['stats'] = {
+            'total': {
+                'suspect_cases': stats[0],
+                'confirmed_cases': stats[1],
+                'deaths': stats[2],
+                'people_average': stats[3],
+                'smokers': stats[4],
+            }
+        }
 
         return context
 
