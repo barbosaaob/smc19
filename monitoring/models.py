@@ -41,7 +41,7 @@ class Profile(models.Model):
         return self.full_name
 
 class Address(models.Model):
-    profile = models.ForeignKey(Profile, models.CASCADE, null = True, blank = True, default=None)
+    profile = models.ForeignKey(Profile, models.CASCADE)
     primary = models.BooleanField(verbose_name='Principal', blank=True, default=False)
     type = models.CharField(verbose_name='Tipo', max_length=2, choices=choices.address_types, blank=True, default='')
     postal_code = models.CharField(verbose_name='CEP', max_length=8, blank=True, default='')
@@ -181,15 +181,3 @@ class Familiar(models.Model):
 
     def __str__(self):
         return self.full_name
-
-class DeadAddress(Address, models.Model):
-    dead_profile = models.ForeignKey(DeadProfile, on_delete=models.CASCADE)
-    def __init__(self,dead_profile, *args, **kwargs):
-        self.dead_profile = dead_profile
-        super(DeadAddress, self).__init__(args, kwargs)
-
-class FamiliarAddress(Address, models.Model):
-    familiar = models.ForeignKey(Familiar, on_delete=models.CASCADE)
-    def __init__(self, familiar, *args, **kwargs):
-        self.familiar = familiar
-        super(FamiliarAddress, self).__init__(args, kwargs)

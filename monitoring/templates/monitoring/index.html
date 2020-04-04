@@ -30,10 +30,11 @@
                         {% csrf_token %}
                         <div id="div_id_profile" class="form-group">
                                 <!-- aqui vem os profiles encontrados><!-->
-                                <div id="profiles">
-
-                                </div>
+                                <select name="profile" class="select form-control" required id="id_profile">
+                                    <option value="" selected>Nenhum perfil selecionado.</option>
+                                </select>
                         </div>
+
                         {{ monitoring_create_form.tested|as_crispy_field }}
                         {{ monitoring_create_form.suspect|as_crispy_field }}
                         {{ monitoring_create_form.virus_exposure|as_crispy_field }}
