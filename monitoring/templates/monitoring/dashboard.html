@@ -29,7 +29,8 @@
 
     <div class="row">
         <svg id="bar-1" class="col-sm-12 col-md-6 col-lg-4 p-3 border shadow-sm" style="height: 300px"></svg>
-        <svg id="pie-1" class="pie-chart col-sm-12 col-md-6 col-lg-4 border shadow-sm mx-auto" style="height: 300px"></svg>
+        <svg id="pie-1" class="pie-chart col-sm-12 col-md-6 col-lg-4 border shadow-sm mx-auto"
+             style="height: 300px"></svg>
         <div id="forecast" class="text-center bg-dark text-light  rounded col-sm-12 col-md-6 col-lg-4"
              style="height: 300px">
             <p>Previsão para os próximos 4 dias</p>
@@ -75,6 +76,34 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class="row">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Nome da unidade de saúde</th>
+                <th>Leitos disponiveis</th>
+                <th>Leitos ocupados</th>
+                <th>UTIs disponíveis</th>
+                <th>UTIs ocupadas</th>
+                <th>Respiradores disponíveis</th>
+                <th>Respiradores ocupados</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for health_center in health_centers %}
+                <tr>
+                <td>{{ health_center.name }}</td>
+                <td>{{ health_center.beds }}</td>
+                <td>{{ health_center.occupied_beds }}</td>
+                <td>{{ health_center.icus }}</td>
+                <td>{{ health_center.occupied_icus }}</td>
+                <td>{{ health_center.respirators }}</td>
+                <td>{{ health_center.occupied_respirators }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 
 

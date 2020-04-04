@@ -1,18 +1,17 @@
 from django.contrib import messages
 from django.contrib.auth import mixins
 from django.db import connection
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.http import HttpResponseRedirect
+from django.http import JsonResponse
 from django.urls import reverse_lazy, reverse
 from django.views import generic
-from django.http import JsonResponse
 
 from monitoring import choices
+from prediction.models import HealthCenter, HealthCenterStatus
 from . import forms
 from . import models
 from . import utils
-
-from prediction.models import HealthCenter, HealthCenterStatus
 
 
 # Create your views here.
@@ -127,13 +126,20 @@ class Map(mixins.LoginRequiredMixin, generic.TemplateView):
             "latitude": u.latitude,
             "longitude": u.longitude,
             "healthCenterStatus": {
-                "beds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "intensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "respirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "occupiedBeds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "occupiedIntensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "occupiedRespirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].occupied_respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
-                "date": str(HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].date) if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else '2020-01-01'
+                "beds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].beds if len(
+                    HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "intensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[
+                    0].icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "respirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[
+                    0].respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedBeds": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[
+                    0].occupied_beds if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedIntensiveCareUnits": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[
+                    0].occupied_icus if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "occupiedRespirators": HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[
+                    0].occupied_respirators if len(HealthCenterStatus.objects.filter(health_center=u)) > 0 else 0,
+                "date": str(HealthCenterStatus.objects.filter(health_center=u).order_by('-date')[0].date) if len(
+                    HealthCenterStatus.objects.filter(health_center=u)) > 0 else '2020-01-01'
             }
         } for u in HealthCenter.objects.all()]
 
@@ -223,19 +229,62 @@ class Dashboard(mixins.LoginRequiredMixin, generic.TemplateView):
             column: beds[i] for i, column in enumerate(bed_columns)
         }
 
+        beds_sql_query = '''
+                SELECT 
+                    prediction_healthcenter.center_name,
+        	        SUM(last_status.beds) AS beds,
+                    SUM(last_status.occupied_beds) AS occupied_beds,
+                    SUM(last_status.icus) AS icus,
+                    SUM(last_status.occupied_icus) AS occupied_icus,
+                    SUM(last_status.respirators) AS respirators,
+                    SUM(last_status.occupied_respirators) AS occupied_respirators
+                FROM 
+                    prediction_healthcenter
+                    JOIN 
+                    (
+                        SELECT 
+                            prediction_healthcenterstatus.*,
+                            MAX(id) AS last_status_id
+                        FROM 
+                            prediction_healthcenterstatus
+                        GROUP BY prediction_healthcenterstatus.health_center_id
+                    ) last_status
+                    ON
+        		        last_status.health_center_id = prediction_healthcenter.id
+        	    GROUP BY 
+        	        prediction_healthcenter.center_name
+        	    ORDER BY 
+        	        %s
+        	    LIMIT 20
+                '''
+        beds_sql_query = beds_sql_query % (self.request.GET.get('health_centers_sort', 'last_status.beds DESC'))
+        with connection.cursor() as cursor:
+            cursor.execute(beds_sql_query)
+            context['health_centers'] = [{
+                'name': row[0],
+                'beds': row[1],
+                'occupied_beds': row[2],
+                'icus': row[3],
+                'occupied_icus': row[4],
+                'respirators': row[5],
+                'occupied_respirators': row[6],
+            } for row in cursor.fetchall()]
+
         return context
 
 
-#Profile
+# Profile
 class ProfileSearch(mixins.LoginRequiredMixin, generic.CreateView):
     model = models.Profile
+
     def get(self, request, *args, **kwargs):
         search_term = self.kwargs['term']
         profiles = list(models.Profile.objects.filter(Q(full_name__icontains=search_term) |
-                                                    Q(id_document__startswith=search_term) |
-                                                    Q(cpf__startswith=search_term) |
-                                                    Q(cns__startswith=search_term)).values())
+                                                      Q(id_document__startswith=search_term) |
+                                                      Q(cpf__startswith=search_term) |
+                                                      Q(cns__startswith=search_term)).values())
         return JsonResponse(profiles, safe=False)
+
 
 class ProfileCreate(mixins.LoginRequiredMixin, generic.CreateView):
     form_class = forms.ProfileForm
